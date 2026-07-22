@@ -7,7 +7,7 @@ login node.
 
 ## Use it
 
-Drop this directory into `~/.claude/skills/ccan` (or a project's `.claude/skills/ccan`), then:
+Drop this directory into `~/.claude/skills/ccc` (or a project's `.claude/skills/ccc`), then:
 
 1. Put your username and PI in [`config.sh`](config.sh).
 2. Follow [`SETUP.md`](SETUP.md) — some steps are human-only and marked `(*)`: they need a browser,

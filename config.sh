@@ -1,5 +1,5 @@
 #!/bin/bash
-# Per-user settings for the ccan skill. Everything user-specific lives here and nowhere else.
+# Per-user settings for the ccc skill. Everything user-specific lives here and nowhere else.
 # Edit this file when handing the skill to someone new; the rest of the skill is generic.
 # Sourced by scripts/*.sh, and read by agents to resolve `$CC_USER` / `$CC_ACCOUNT` in the docs.
 

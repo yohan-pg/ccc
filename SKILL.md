@@ -1,5 +1,5 @@
 ---
-name: ccan
+name: ccc
 description: Run experiments on Digital Research Alliance of Canada (Compute Canada) clusters — Rorqual by default, also Fir, Narval, Nibi, Trillium, tamIA. Use whenever asked to run training/experiments "on the cluster", "on Compute Canada", "on the Alliance", "on Narval/Rorqual/Fir/Nibi", or to rsync code/data to a cluster, submit or debug Slurm jobs, or pull results back. Covers automation-node login and its command whitelist, def- vs rrg- allocations, module+virtualenv setup, GPU/CPU/memory ratios, MIG, OptiX and which clusters have RT cores, $SLURM_TMPDIR, job monitoring and cancellation.
 ---
 
@@ -310,7 +310,7 @@ submitting (`scripts/submit.sh` does).
 Submit — one command, one ssh, absolute paths, `--chdir` instead of `cd &&`:
 
 ```bash
-bash .claude/skills/ccan/scripts/submit.sh ./myproj job.sh     # preferred; prints the JID
+bash .claude/skills/ccc/scripts/submit.sh ./myproj job.sh     # preferred; prints the JID
 # equivalently, by hand — note the separate mkdir, since one ssh cannot do both:
 ssh cc "mkdir -p /home/yohanpg/links/scratch/myproj/logs"
 JID=$(ssh cc "sbatch --parsable --chdir=/home/yohanpg/links/projects/rrg-jlalonde/yohanpg/myproj /home/yohanpg/links/projects/rrg-jlalonde/yohanpg/myproj/job.sh")
@@ -577,7 +577,7 @@ That gate exists to make mass scraping expensive, not to keep you out: the scrip
 proof-of-work, which is what a browser does silently, and returns raw wikitext.
 
 ```bash
-python3 .claude/skills/ccan/scripts/fetch_wiki.py Rorqual Using_GPUs_with_Slurm
+python3 .claude/skills/ccc/scripts/fetch_wiki.py Rorqual Using_GPUs_with_Slurm
 # -> Rorqual.wiki, Using_GPUs_with_Slurm.wiki  (MediaWiki source, tables intact)
 ```
 
