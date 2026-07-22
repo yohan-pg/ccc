@@ -21,9 +21,9 @@ Prompts that trigger it:
 
 ```
 Launch the learning-rate sweep on Rorqual overnight, one job per config.
-Anything from last night finish? Summarize the final losses.
-Job 12345678 has been pending 6 hours — is my request unreasonable?
-The 4-GPU run died at step 900 with CUDA OOM. Diagnose and resubmit.
-Bring back the checkpoints and metrics for run042 so I can plot them.
-How many CPUs and how much memory per GPU should I ask for on Narval?
+Did anything finish last night? Summarize the final losses.
+The sweep has been pending all morning — am I asking for too much?
+The big ablation died with CUDA OOM. Diagnose it and resubmit.
+Bring the sweep results back so I can plot them.
+Is this worth running on Narval instead, and how should I size the request?
 ```
