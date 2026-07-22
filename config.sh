@@ -11,10 +11,14 @@ CC_PI=jlalonde
 
 # ------------------------------------------------------------------------------------
 
-# Default account for jobs. As of 2026-07-22 Rorqual lists NO RAC account for this user, only the
-# RAS default — an rrg- submit is rejected outright (see LOG.md). def- works everywhere at low
-# priority. See references/clusters.md.
-CC_ACCOUNT=def-$CC_PI
+# Accounts, split by resource type: the RAC award on Rorqual is GPU-only (verified 2026-07-22).
+# A GPU-less job under rrg- is rejected at submit, so CPU work has to go through def-.
+# The rrg- award has the better priority — use it for anything with a GPU. See references/clusters.md.
+CC_ACCOUNT_GPU=rrg-$CC_PI
+CC_ACCOUNT_CPU=def-$CC_PI
+
+# Back-compat alias for anything that just wants "the" account; GPU work is the common case.
+CC_ACCOUNT=$CC_ACCOUNT_GPU
 
 # Which RAP's project tree holds data. Each RAP has its own directory and its own quota, so keep
 # this consistent with CC_ACCOUNT unless you have a reason not to.

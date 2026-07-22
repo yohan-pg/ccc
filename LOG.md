@@ -96,23 +96,33 @@ of a client misconfiguration — the 2026-07-22 entry's "uniform failure across 
 per-cluster bug" reasoning does not invert. Rorqual is the default and works; don't burn time on the
 others.
 
-### `rrg-jlalonde` is not a valid *compute* account on Rorqual — use `def-jlalonde`
-Rorqual / 2026-07-22. A CPU smoke job with `#SBATCH --account=rrg-jlalonde` was rejected at submit:
+### `rrg-jlalonde` is GPU-only — the "no RAC account" reading was wrong
+Rorqual / 2026-07-22. A **CPU-only** smoke job with `#SBATCH --account=rrg-jlalonde` was rejected at
+submit, listing an empty `RAC accounts:`. This was first written up here as "there is no `rrg-`
+compute allocation at all" and the default was flipped to `def-` everywhere. **That conclusion was
+wrong**, and the error message is what made it look right.
+
+`sbatch --test-only` (free, submits nothing) isolates it — same script, only the GPU request differs:
 
 ```
-sbatch: error: You cannot use this account to submit this job.
-sbatch: error: Please use one of the following accounts:
-sbatch: error:   RAS default accounts: def-jlalonde,
-sbatch: error:           RAC accounts:
+--account=rrg-jlalonde --cpus-per-task=1 --mem=2G            -> rejected, "RAC accounts:" empty
+--account=rrg-jlalonde --gpus-per-node=h100:1 --mem=124G     -> accepted, partition gpubase_bygpu_b1
+--account=def-jlalonde --gpus-per-node=h100:1 --mem=124G     -> accepted (control)
 ```
 
-The RAC list is **empty** — there is no `rrg-` compute allocation on Rorqual at all, so the SKILL.md
-default `--account=rrg-jlalonde` fails on the default cluster. `config.sh` now sets
-`CC_ACCOUNT=def-jlalonde`.
+The award is **GPU-only**. Slurm resolves a bare account to `_cpu` or `_gpu` by whether the job asks
+for a GPU, so a CPU job under `rrg-` resolves to `rrg-jlalonde_cpu`, which does not exist. The
+account list in the error is **filtered to the resource type requested**, which is why `RAC accounts:`
+comes back empty and reads as "you have no RAC award" rather than "not for this resource type". The
+full error does say `may not have a resource allocation of the type requested` — that line is the
+one that matters, and it is easy to skim past in the wall of text.
 
-Storage is separate and unaffected: `ls /home/yohanpg/links/projects` still shows **both**
-`def-jlalonde` and `rrg-jlalonde`, so the `rrg-` project tree exists and remains the place to stage
-data (`CC_PROJECT_RAP` unchanged). A `def-` job reading from the `rrg-` project directory is fine.
+So: `rrg-` for GPU jobs (better priority, it is the RAC award), `def-` for CPU-only. `config.sh` now
+carries `CC_ACCOUNT_GPU` / `CC_ACCOUNT_CPU` instead of a single default.
 
-Resubmitting with `def-jlalonde` worked: job 17081823, no queue wait, ran on `rc32112`, reported
-`account=def-jlalonde_cpu` — Slurm appends the `_cpu` suffix itself for GPU-less jobs.
+**Method note:** the original diagnosis came from one failed submit and no control. `--test-only`
+costs nothing and would have caught it immediately — vary one factor and test both directions before
+concluding an allocation is dead.
+
+Storage is separate and unaffected either way: both `def-jlalonde` and `rrg-jlalonde` project trees
+exist, and `CC_PROJECT_RAP` stays on `rrg-`. Any job can read either.

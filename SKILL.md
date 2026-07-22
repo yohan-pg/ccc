@@ -9,9 +9,13 @@ description: Run experiments on Digital Research Alliance of Canada (Compute Can
 user-specific file in this skill. Everything below uses those values; the worked examples show one
 user's (`yohanpg` / `jlalonde`) for readability, so substitute if `config.sh` says otherwise.
 
-Default cluster **Rorqual**, default account **`$CC_ACCOUNT`** = `def-<PI>`. Verified 2026-07-22:
-Rorqual lists **no RAC account** for this user, so `rrg-<PI>` is rejected at submit (LOG.md). The
-`rrg-` *project directory* is unrelated and still exists — storage and compute are separate grants.
+Default cluster **Rorqual**. **The account depends on whether the job asks for a GPU** — the RAC
+award here is GPU-only (verified 2026-07-22, LOG.md):
+
+- **GPU jobs → `$CC_ACCOUNT_GPU` = `rrg-<PI>`.** The RAC award, and the better priority. Use it.
+- **CPU-only jobs → `$CC_ACCOUNT_CPU` = `def-<PI>`.** `rrg-` has no CPU allocation and a GPU-less
+  submit under it is **rejected outright**, so this is not a preference — it is the only thing that
+  works.
 
 The workflow is always **rsync in → sbatch → poll → rsync out**. You never compute on a login node
 and you never hold an interactive session.
@@ -157,7 +161,7 @@ Quotas, per-cluster `$SLURM_TMPDIR` sizes, and the other RAPs' project directori
 
 **Each RAP has its own project directory with its own quota** — `links/projects/rrg-jlalonde/` and
 `links/projects/def-jlalonde/` are different filesystems, not aliases. Default to the **`rrg-`** tree,
-even though jobs run under `--account=def-jlalonde`: it is the RAC award's storage, and it is the
+matching the `rrg-` account GPU jobs run under: it is the RAC award's storage, and it is the
 larger quota. Both are readable from any
 job, so a job running under `rrg-` may still read something already staged under `def-` — just do not
 scatter new data across both.
@@ -261,7 +265,7 @@ the start of a campaign is cheap and answers most environment questions in one g
 
 ```bash
 #!/bin/bash
-#SBATCH --account=def-jlalonde      # no RAC (rrg-) compute on Rorqual for this user; see LOG.md
+#SBATCH --account=rrg-jlalonde      # RAC award: GPU jobs only. CPU-only jobs must use def- (§4)
 #SBATCH --job-name=myproj_run042
 #SBATCH --gpus-per-node=h100:1      # always name the model; bare "=1" may be rejected
 #SBATCH --cpus-per-task=16          # the full Rorqual per-GPU ratio: free, feeds the dataloader (§5)
@@ -332,7 +336,7 @@ probes — belongs in a CPU-only job on the `_cpu` side of the allocation. Do no
 that will not use one; it bills a whole GPU bundle and queues far longer.
 
 ```bash
-#SBATCH --account=def-jlalonde     # _cpu variant selected automatically (no GPU requested)
+#SBATCH --account=def-jlalonde     # MUST be def- here: rrg- has no CPU allocation, submit is refused
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=0-02:00
@@ -346,6 +350,12 @@ both.
 
 Slurm appends the `_cpu` suffix itself: a GPU-less job under `--account=def-jlalonde` reports
 `def-jlalonde_cpu`. That is expected, not a misrouted job.
+
+**This is the one place the account differs from the GPU default**, and forgetting it produces the
+`You cannot use this account` wall of text — whose list of "valid accounts" is filtered to the
+resource type you asked for, so it comes back empty under `RAC accounts:` and reads as though the
+RAC award does not exist. It does; it is just GPU-only. Switch to `def-` for the CPU job rather than
+concluding anything about the allocation.
 
 ## 5. GPU sizing — you are billed for the max, not the sum
 
@@ -485,7 +495,7 @@ The prompt gives you a compute budget in GPU-hours. Treat it as hard.
 | Job hangs then dies on a download / `wandb` / `from_pretrained` | compute nodes have no internet (§3) — pre-stage and set the offline env vars |
 | ssh/rsync remote path not found | `~` does not expand under the wrapper — use `/home/yohanpg/…` |
 | `You are associated with multiple ... allocations` | pass `--account=` explicitly, suffix included |
-| `You cannot use this account to submit this job` | there is no `rrg-` **compute** allocation — the error lists the valid ones; use `def-jlalonde`. The `rrg-` *project* directory still exists and is unrelated |
+| `You cannot use this account to submit this job`, `RAC accounts:` empty | almost always a **CPU-only job submitted under `rrg-`** — the RAC award is GPU-only, and the account list in that error is filtered to the resource type requested, so it looks like the RAC does not exist. Use `def-jlalonde` for CPU work, keep `rrg-jlalonde` for GPU (§4) |
 | Builds fine, then fails in `optixInit()` | OptiX host lib is in the driver; GPU nodes only. Run it in a job, not on a login/automation node |
 | Ray tracing slower than the local RTX box | H100/A100 have no RT cores — software BVH traversal. Expected |
 | `Disk quota exceeded` writing to /project | rsync preserved group — add `--no-g --no-p` |
