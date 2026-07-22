@@ -43,11 +43,13 @@ sits on, are **per-user** — check CCDB rather than assuming. The rules below h
 Find yours in CCDB → *My Projects → My Resources and Allocations*; the string for `--account=` is the
 *Group Name* column. `<PI>` is `CC_PI` in `config.sh`.
 
-- `rrg-jlalonde` is valid **on Rorqual only**. A RAC account on any other cluster is rejected at
-  submission, so "invalid account" usually means cluster/account mismatch, not a typo. Elsewhere use
-  `def-jlalonde`.
+- **`rrg-jlalonde` is not currently usable for compute.** A submit on Rorqual (2026-07-22) was
+  rejected with `RAC accounts:` **empty** and only `def-jlalonde` offered, so `def-jlalonde` is the
+  default everywhere. Note the `rrg-jlalonde` *project directory* still exists — a storage grant does
+  not imply a compute one. Re-check CCDB if a RAC award is expected; the error message enumerates the
+  accounts that actually work, so read it rather than guessing.
 - Heavy RAC use draws down a real annual grant and depresses its priority as usage accumulates;
-  `def-` never depletes but starts far behind. Long/large runs → `rrg-`. Throwaway smoke tests → either.
+  `def-` never depletes but starts far behind.
 - `aip-jlalonde` is effectively unusable by an agent: two of its three clusters have no automation
   node, and tamIA **schedules whole nodes only** (`--gpus=h100:4` or `--gpus=h200:8`, no MIG), so a
   1-GPU experiment costs 4 GPUs' worth of allocation there.
@@ -59,7 +61,7 @@ Find yours in CCDB → *My Projects → My Resources and Allocations*; the strin
 CPU and GPU use are tracked as separate allocations, so every account has two underlying Slurm
 accounts: `def-jlalonde_cpu` / `def-jlalonde_gpu`, `rrg-jlalonde_cpu` / `_gpu`, etc.
 
-- **Submitting:** pass the bare name (`--account=rrg-jlalonde`); Slurm routes to `_cpu` or `_gpu`
+- **Submitting:** pass the bare name (`--account=def-jlalonde`); Slurm routes to `_cpu` or `_gpu`
   based on whether the job requests a GPU. If you get `You are associated with multiple _cpu
   allocations…` (likely here — three RAPs), the message lists the exact accounts; pass one verbatim,
   suffix included.
@@ -77,8 +79,8 @@ accounts: `def-jlalonde_cpu` / `def-jlalonde_gpu`, `rrg-jlalonde_cpu` / `_gpu`, 
 
 Each RAP gets **its own project directory with its own quota** — `links/projects/rrg-jlalonde/` and
 `links/projects/def-jlalonde/` are different symlinks into different `/lustre` project trees, not
-aliases for one another. Default to the `rrg-` tree to match the default
-`--account=rrg-jlalonde`. All of them are readable from any job regardless of which account it runs
+aliases for one another. Default to the `rrg-` tree — the RAC storage grant — even though jobs run
+under `--account=def-jlalonde`. All of them are readable from any job regardless of which account it runs
 under, so an existing dataset under `def-` is still usable — just don't scatter new data across both.
 
 `$SLURM_TMPDIR` sizes above are defaults, not ceilings. On Rorqual `#SBATCH --tmp=xG` takes it from

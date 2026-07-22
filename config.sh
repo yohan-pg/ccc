@@ -11,9 +11,10 @@ CC_PI=jlalonde
 
 # ------------------------------------------------------------------------------------
 
-# Default account for jobs. The RAC award (rrg-) has far better priority but is valid only on the
-# cluster it was awarded on; def- works everywhere at low priority. See references/clusters.md.
-CC_ACCOUNT=rrg-$CC_PI
+# Default account for jobs. As of 2026-07-22 Rorqual lists NO RAC account for this user, only the
+# RAS default — an rrg- submit is rejected outright (see LOG.md). def- works everywhere at low
+# priority. See references/clusters.md.
+CC_ACCOUNT=def-$CC_PI
 
 # Which RAP's project tree holds data. Each RAP has its own directory and its own quota, so keep
 # this consistent with CC_ACCOUNT unless you have a reason not to.

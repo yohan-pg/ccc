@@ -95,3 +95,24 @@ factor. So one cluster failing while another works is expected during rollout an
 of a client misconfiguration — the 2026-07-22 entry's "uniform failure across 5 clusters ⇒ never a
 per-cluster bug" reasoning does not invert. Rorqual is the default and works; don't burn time on the
 others.
+
+### `rrg-jlalonde` is not a valid *compute* account on Rorqual — use `def-jlalonde`
+Rorqual / 2026-07-22. A CPU smoke job with `#SBATCH --account=rrg-jlalonde` was rejected at submit:
+
+```
+sbatch: error: You cannot use this account to submit this job.
+sbatch: error: Please use one of the following accounts:
+sbatch: error:   RAS default accounts: def-jlalonde,
+sbatch: error:           RAC accounts:
+```
+
+The RAC list is **empty** — there is no `rrg-` compute allocation on Rorqual at all, so the SKILL.md
+default `--account=rrg-jlalonde` fails on the default cluster. `config.sh` now sets
+`CC_ACCOUNT=def-jlalonde`.
+
+Storage is separate and unaffected: `ls /home/yohanpg/links/projects` still shows **both**
+`def-jlalonde` and `rrg-jlalonde`, so the `rrg-` project tree exists and remains the place to stage
+data (`CC_PROJECT_RAP` unchanged). A `def-` job reading from the `rrg-` project directory is fine.
+
+Resubmitting with `def-jlalonde` worked: job 17081823, no queue wait, ran on `rc32112`, reported
+`account=def-jlalonde_cpu` — Slurm appends the `_cpu` suffix itself for GPU-less jobs.
