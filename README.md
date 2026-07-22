@@ -1,8 +1,9 @@
 # Claude for Compute Canada
 
-A [Claude Code](https://claude.com/claude-code) skill for running experiments on Digital Research
-Alliance of Canada (Compute Canada) clusters: rsync in, `sbatch`, poll, rsync out — without an agent
-ever touching a login node.
+A [Claude Code](https://claude.com/claude-code) skill for running experiments on
+[Digital Research Alliance of Canada](https://docs.alliancecan.ca/wiki/Technical_documentation)
+(Compute Canada) clusters: rsync in, `sbatch`, poll, rsync out — without an agent ever touching a
+login node.
 
 ## Use it
 
