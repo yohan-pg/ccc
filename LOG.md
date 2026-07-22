@@ -36,10 +36,24 @@ Narval / 2026-07-22. `ssh cc-narval ls` works, but every Slurm command dies insi
 allowed_commands.sh: line 75: squeue: command not found
 ```
 
-Same for `sbatch` and `scontrol`. This is *not* the whitelist — the wrapper accepted the command and
-then failed to find the binary (a rejection would have printed `Command rejected by …`), and
-`slurm_commands.sh` is present in the wrapper directory. So Narval is **transfer-only** for an agent:
-rsync in, nothing else. Submit from Rorqual, or have the user submit on a Narval login node.
+Same for `sbatch` and `scontrol`. This is *not* the whitelist — line 75 is the `$SSH_ORIGINAL_COMMAND`
+call inside the wrapper's `squeue*|scancel*|sbatch*|scontrol*|sq*` branch, so the command was
+*accepted* and then not found on `PATH` (a rejection prints `Command rejected by …` instead).
+
+The binaries do exist — `ls /opt/software/slurm/bin` on the same node lists `sbatch`, `squeue`,
+`sacct`… — but **calling one by absolute path is rejected**, because the wrapper matches on the
+command as typed and `/opt/...` matches no branch:
+
+```
+Command rejected by allowed_commands.sh: /opt/software/slurm/bin/squeue --version
+```
+
+So there is no client-side workaround, and the wiki
+(`Automation_in_the_context_of_multifactor_authentication`, fetched 2026-07-22) does not mention it —
+it lists Narval's robot host with no caveat. Rorqual's robot node has the same binaries and no
+`/usr/bin/squeue` either, yet resolves them, so this is a per-node `PATH` difference and looks like a
+Narval-side misconfiguration worth a support ticket. Until then Narval is **transfer-only** for an
+agent: rsync in, nothing else. Submit from Rorqual, or have the user submit on a Narval login node.
 
 ### Free GPUs are countable with `scontrol`, not `sinfo`
 Rorqual / 2026-07-22. `sinfo` and `partition-stats` are blocked, but `scontrol -o show nodes` is

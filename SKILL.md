@@ -142,7 +142,7 @@ ssh cc "python3 /home/yohanpg/scan_log.py /home/yohanpg/links/scratch/myproj/run
 ```
 
 `python3 -c "…"` does **not** work — the wrapper word-splits, so `-c` receives only the first token.
-Pass a file. Keep these to seconds of CPU (§9); they are a filter, not a workload.
+Pass a file. Keep these to seconds of CPU (§10); they are a filter, not a workload.
 
 The whitelist is a knob, not a law: `command=` can point at any script. If the workflow genuinely
 needs `sacct`/`seff`/`srun`, propose widening it (`SETUP.md`) rather than accumulating hacks.
@@ -551,7 +551,38 @@ accumulate hacks. Raise it with the user: `command=` can point at a custom scrip
 defensible change. That is a decision for the user (and possibly a support ticket), so propose it
 rather than doing it.
 
-## 9. Hard rules
+## 9. Record the recipe in the project's `CCC.md`
+
+Working out how one project builds on the cluster is most of the cost of the first campaign, and none
+of it is in this skill — it is project-specific: which modules, which pinned wheels, which package
+the Alliance wheelhouse is missing, which cluster it was proven on. **Write that down in `CCC.md` at
+the root of the project you are working on**, and update it whenever a run teaches you something new.
+Read it first if it already exists: it is the difference between one probe job and five.
+
+Keep it short and concrete — a recipe, not an essay:
+
+- **Cluster and date** it was last made to work on, plus the account used (`rrg-` / `def-`).
+- **The exact `module load` line.** Say *why* each module is there when it is not obvious — `cudnn`
+  is a separate module from `cuda` and a missing one surfaces as `libcudnn.so: cannot open shared
+  object file`; `opencv` must come from a module because the wheelhouse ships a stub that fails to
+  build; loading a module can silently change the active Python version.
+- **The pip line**, with the versions that actually resolved under `--no-index`, and any wheel that
+  had to be named explicitly because it is not pulled in as a dependency.
+- **Anything the wheelhouse does not have**, and how it was obtained instead.
+- **`PYTHONPATH` / env vars**, including that appending (`$DR:$PYTHONPATH`) rather than overwriting
+  matters when modules supply packages.
+- **Where code, data and checkpoints live on the cluster**, absolute paths, and how big they are.
+- **The job script that worked**, or a path to it, with the resources requested and the observed
+  runtime — so the next `--time` and `--mem` are estimates rather than guesses.
+- **Known-broken things** and the symptom each produces.
+
+`CCC.md` is a new file appearing in someone's repository, so **add a one-line pointer to it in the
+project's README** the first time you create it (e.g. *"`CCC.md` — how to build and run this project
+on Compute Canada / Alliance clusters"*). Without that it reads as stray agent output and gets
+deleted. If the project's conventions forbid you writing to the repository root, say where you put it
+instead rather than skipping it.
+
+## 10. Hard rules
 
 - Never run training, data prep, or anything over ~10 CPU-minutes / 4 GB RAM on a login or automation
   node. Compile-scale work only; everything else goes through `sbatch`.
@@ -561,7 +592,7 @@ rather than doing it.
 - Report back with: job IDs, the cluster, the **absolute path** to the run directory on the cluster,
   the local path results were synced to, and GPU-hours consumed vs. budget.
 
-## 10. How to end a turn
+## 11. How to end a turn
 
 **Always close with a one-line compute report**, even if the task used none:
 
@@ -580,7 +611,7 @@ Waiting on queue.
 Only when something is genuinely still in flight — it is the at-a-glance signal that the user just
 needs to wait rather than read. List the job IDs above it so they can check themselves.
 
-## 11. Reading the documentation, and keeping these files current
+## 12. Reading the documentation, and keeping these files current
 
 ### Where to look things up
 
