@@ -20,11 +20,11 @@ Then just ask Claude to run something on the cluster.
 Prompts that trigger it:
 
 ```
-Launch the learning-rate sweep on Rorqual overnight, one job per config.
+Launch a learning-rate sweep on Rorqual overnight, one job per config.
+Launch a learning-rate sweep on Rorqual, batched into 4 hour jobs, fix any issues along the way.
+Which clusters have GPUs free right now?
 Did anything finish last night? Summarize the final losses.
 The sweep has been pending all morning — am I asking for too much?
-Keep an eye on the sweep and resubmit anything that crashes.
 Bring the results back and plot validation loss against learning rate.
-Is this worth running on Narval instead, and how should I size the request?
 Break down the compute we burned last month by project and major subtask.
 ```
