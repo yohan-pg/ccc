@@ -26,4 +26,5 @@ The sweep has been pending all morning — am I asking for too much?
 Keep an eye on the sweep and resubmit anything that crashes.
 Bring the results back and plot validation loss against learning rate.
 Is this worth running on Narval instead, and how should I size the request?
+Break down the compute we burned last month by project and major subtask.
 ```
