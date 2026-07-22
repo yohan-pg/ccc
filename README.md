@@ -17,8 +17,6 @@ Then just ask Claude to run something on the cluster.
 
 ## Examples
 
-Prompts that trigger it:
-
 ```
 Launch a learning-rate sweep on Rorqual overnight, one job per config.
 Launch a learning-rate sweep on Rorqual, batched into 4 hour jobs, fix any issues along the way.

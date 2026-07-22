@@ -12,9 +12,9 @@ which fails on working hosts — SKILL.md §1).
 | Cluster | Automation host | Agent-usable |
 |---|---|---|
 | **Rorqual** | `robot.rorqual.alliancecan.ca` | **yes — default, verified working** |
-| Narval | `robot.narval.alliancecan.ca` | yes — verified working |
+| Narval | `robot.narval.alliancecan.ca` | login works, but **transfer only** — `squeue`/`sbatch`/`scontrol` are whitelisted yet absent from the node's `PATH` (2026-07-22), so no job can be submitted or polled |
 | Trillium (CPU) | `robot{1,2,3,4}.scinet.utoronto.ca` | yes — verified working; whole 192-core nodes only |
-| Trillium (GPU) | `trig-robot1.scinet.utoronto.ca` | separate subcluster; not separately verified |
+| Trillium (GPU) | `trig-robot1.scinet.utoronto.ca` | separate subcluster; `Host key verification failed` from this machine (2026-07-22) — its host key was never accepted, human-only to fix |
 | Fir | `robot.fir.alliancecan.ca` | **not yet** — still MFA-denied 2026-07-23 (enrollment lag) |
 | tamIA | `robot.tamia.ecpia.ca` | **not yet** — still MFA-denied 2026-07-23. Also **GPU jobs whole-node only**: 4×h100 or 8×h200 (below) |
 | Nibi | `robot.nibi.alliancecan.ca` | **no** — closes the connection right after the publickey offer |

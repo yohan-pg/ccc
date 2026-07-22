@@ -28,3 +28,23 @@ directly. `ls /home/yohanpg/links` → `nearlines  projects  scratch`; `ls .../l
 Each RAP has its **own project directory and quota**, so writing under `def-` while submitting with
 `--account=rrg-jlalonde` is legal but splits your data across two quotas. Pick one deliberately —
 `rrg-` is the default in `config.sh`.
+
+### Narval's automation node has no Slurm binaries in `PATH`
+Narval / 2026-07-22. `ssh cc-narval ls` works, but every Slurm command dies inside the wrapper:
+
+```
+allowed_commands.sh: line 75: squeue: command not found
+```
+
+Same for `sbatch` and `scontrol`. This is *not* the whitelist — the wrapper accepted the command and
+then failed to find the binary (a rejection would have printed `Command rejected by …`), and
+`slurm_commands.sh` is present in the wrapper directory. So Narval is **transfer-only** for an agent:
+rsync in, nothing else. Submit from Rorqual, or have the user submit on a Narval login node.
+
+### Free GPUs are countable with `scontrol`, not `sinfo`
+Rorqual / 2026-07-22. `sinfo` and `partition-stats` are blocked, but `scontrol -o show nodes` is
+allowed and carries everything needed: `CfgTRES` has `gres/gpu:<model>=N`, `AllocTRES` has the
+in-use count, and `State` flags `DOWN`/`DRAIN`. Free = Cfg − Alloc over non-drained nodes. The output
+is ~780 lines (~1 MB) — fine to `cat` back and parse locally, and note there is **no `GresUsed`
+field** on Slurm 25.11 here, so parse the TRES fields.
+
