@@ -9,8 +9,9 @@ description: Run experiments on Digital Research Alliance of Canada (Compute Can
 user-specific file in this skill. Everything below uses those values; the worked examples show one
 user's (`yohanpg` / `jlalonde`) for readability, so substitute if `config.sh` says otherwise.
 
-Default cluster **Rorqual**, default account **`$CC_ACCOUNT`** (the RAC `rrg-` award is valid only on
-the cluster it was awarded on; anywhere else it is rejected — use `def-<PI>` there).
+Default cluster **Rorqual**, default account **`$CC_ACCOUNT`** = `def-<PI>`. Verified 2026-07-22:
+Rorqual lists **no RAC account** for this user, so `rrg-<PI>` is rejected at submit (LOG.md). The
+`rrg-` *project directory* is unrelated and still exists — storage and compute are separate grants.
 
 The workflow is always **rsync in → sbatch → poll → rsync out**. You never compute on a login node
 and you never hold an interactive session.
@@ -88,6 +89,10 @@ negatives in a row.
   **One command, one `ssh`.**
 - **No remote variable expansion**, for the same reason — `$USER`, `$HOME` arrive literal. Write
   `yohanpg` out.
+- **No inner quoting.** Same reason again: the wrapper word-splits, so a quoted multi-word argument
+  is *not* reassembled — it arrives as separate tokens with the quote characters still attached, and
+  the command rejects the fragment. `squeue -o '%T %r'` fails with `Unrecognized option: %r'`. Any
+  argument that needs to survive must be a single space-free token: `squeue -o %T,%r`.
 - **No `~` expansion.** Always absolute paths: `/home/yohanpg/…`, never `cc:~/…`.
 - **`from="a.b.c.*"`** — the key only works from the registered public IP. If auth suddenly fails,
   check `curl ifconfig.me` against the registered mask and try `ssh -4` (an IPv6 route will not match
@@ -152,8 +157,8 @@ Quotas, per-cluster `$SLURM_TMPDIR` sizes, and the other RAPs' project directori
 
 **Each RAP has its own project directory with its own quota** — `links/projects/rrg-jlalonde/` and
 `links/projects/def-jlalonde/` are different filesystems, not aliases. Default to the **`rrg-`** tree,
-matching the default `--account=rrg-jlalonde`: it is the RAC award's storage, and keeping data and
-jobs on the same allocation avoids splitting the group across two quotas. Both are readable from any
+even though jobs run under `--account=def-jlalonde`: it is the RAC award's storage, and it is the
+larger quota. Both are readable from any
 job, so a job running under `rrg-` may still read something already staged under `def-` — just do not
 scatter new data across both.
 
@@ -256,7 +261,7 @@ the start of a campaign is cheap and answers most environment questions in one g
 
 ```bash
 #!/bin/bash
-#SBATCH --account=rrg-jlalonde      # Rorqual only; def-jlalonde on any other cluster
+#SBATCH --account=def-jlalonde      # no RAC (rrg-) compute on Rorqual for this user; see LOG.md
 #SBATCH --job-name=myproj_run042
 #SBATCH --gpus-per-node=h100:1      # always name the model; bare "=1" may be rejected
 #SBATCH --cpus-per-task=16          # the full Rorqual per-GPU ratio: free, feeds the dataloader (§5)
@@ -327,7 +332,7 @@ probes — belongs in a CPU-only job on the `_cpu` side of the allocation. Do no
 that will not use one; it bills a whole GPU bundle and queues far longer.
 
 ```bash
-#SBATCH --account=rrg-jlalonde     # _cpu variant selected automatically (no GPU requested)
+#SBATCH --account=def-jlalonde     # _cpu variant selected automatically (no GPU requested)
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=0-02:00
@@ -339,9 +344,8 @@ from the RGU used for GPU work (§5). So here **trimming cores and memory genuin
 allocation**, unlike the GPU case: a 2-core 32 GB job is billed as 8 core-equivalents. Right-size
 both.
 
-If the RAC award turns out to carry no CPU share, `rrg-jlalonde_cpu` still exists and simply runs at
-low priority — that is fine for short probes. Switch to `def-jlalonde` only if a CPU job is large
-enough that the priority difference matters.
+Slurm appends the `_cpu` suffix itself: a GPU-less job under `--account=def-jlalonde` reports
+`def-jlalonde_cpu`. That is expected, not a misrouted job.
 
 ## 5. GPU sizing — you are billed for the max, not the sum
 
@@ -408,7 +412,7 @@ Longer-term per-job curves: <https://portal.alliancecan.ca/slurm>.
 ```bash
 ssh cc "squeue -u yohanpg"                                # or: sq
 ssh cc "squeue -j $JID -h -o %T"                          # PENDING / RUNNING / ...
-ssh cc "squeue -j $JID -h -o '%T %r'"                     # state + reason for pending
+ssh cc "squeue -j $JID -h -o %T,%r"                       # state + reason for pending
 ssh cc "scontrol show job -dd $JID"
 ssh cc "cat /home/yohanpg/links/scratch/myproj/logs/myproj_run042-$JID.out"
 ```
@@ -481,7 +485,7 @@ The prompt gives you a compute budget in GPU-hours. Treat it as hard.
 | Job hangs then dies on a download / `wandb` / `from_pretrained` | compute nodes have no internet (§3) — pre-stage and set the offline env vars |
 | ssh/rsync remote path not found | `~` does not expand under the wrapper — use `/home/yohanpg/…` |
 | `You are associated with multiple ... allocations` | pass `--account=` explicitly, suffix included |
-| `Invalid account` / rejected at submit | `rrg-jlalonde` used off Rorqual — use `def-jlalonde` there |
+| `You cannot use this account to submit this job` | there is no `rrg-` **compute** allocation — the error lists the valid ones; use `def-jlalonde`. The `rrg-` *project* directory still exists and is unrelated |
 | Builds fine, then fails in `optixInit()` | OptiX host lib is in the driver; GPU nodes only. Run it in a job, not on a login/automation node |
 | Ray tracing slower than the local RTX box | H100/A100 have no RT cores — software BVH traversal. Expected |
 | `Disk quota exceeded` writing to /project | rsync preserved group — add `--no-g --no-p` |
@@ -622,6 +626,25 @@ Most of these live in `references/clusters.md`, not here.
 expired or moved allocation, a ratio change that invalidates job scripts you are about to submit, a
 whitelist that no longer permits your workflow. Routine drift (a new module version, a reworded doc)
 gets fixed silently in the files, not reported.
+
+### When a command in this skill turns out to be wrong, fix it here
+
+**These files are yours to edit — a wrong command is a bug to repair, not a finding to report.** If
+something in this skill fails and you work out the correct form, the job is not done until the
+correct form is *in this file*. Do it in the same turn, while you still have the evidence:
+
+1. **Verify the replacement actually works** against the cluster before writing it down. Never
+   substitute a guess for a command you just watched fail.
+2. **Edit the offending line in place.** Do not leave the broken command sitting next to a warning
+   about it — the next agent will copy the line, not the caveat.
+3. **Fix the cause, not just the instance.** One bad command usually means a constraint is missing
+   or under-stated somewhere earlier; add it there too, so the whole class of mistake is covered.
+4. **`LOG.md` is for durable findings about the *cluster*** — an allocation that does not exist, a
+   host that refuses connections, a policy that surprised you. A typo or a wrong flag in this skill
+   does not belong there; it belongs in a corrected line. Logging it instead of fixing it leaves the
+   trap in place.
+5. **Mention it in one line at the end of the turn**, after it is fixed. Do not ask permission first
+   — for a verified correction, just make it.
 
 ---
 
