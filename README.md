@@ -20,10 +20,10 @@ Then just ask Claude to run something on the cluster.
 Prompts that trigger it:
 
 ```
-Train this on Rorqual, 1 H100 for 8 hours. Give me the job ID.
-Is job 12345678 still running? Show me the tail of its log.
-Pull run042 back into ./results/.
-It OOM'd at step 900 — bump the memory and resubmit.
-How many CPUs should I ask for per GPU on Narval?
-Does any cluster I can reach have RT cores for OptiX?
+Launch the learning-rate sweep on Rorqual overnight, one job per config.
+Anything from last night finish? Summarize the final losses.
+Job 12345678 has been pending 6 hours — is my request unreasonable?
+The 4-GPU run died at step 900 with CUDA OOM. Diagnose and resubmit.
+Bring back the checkpoints and metrics for run042 so I can plot them.
+How many CPUs and how much memory per GPU should I ask for on Narval?
 ```
