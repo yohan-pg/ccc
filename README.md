@@ -23,7 +23,7 @@ Prompts that trigger it:
 Launch the learning-rate sweep on Rorqual overnight, one job per config.
 Did anything finish last night? Summarize the final losses.
 The sweep has been pending all morning — am I asking for too much?
-The big ablation died with CUDA OOM. Diagnose it and resubmit.
-Bring the sweep results back so I can plot them.
+Keep an eye on the sweep and resubmit anything that crashes.
+Bring the results back and plot validation loss against learning rate.
 Is this worth running on Narval instead, and how should I size the request?
 ```
