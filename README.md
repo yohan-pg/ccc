@@ -14,3 +14,16 @@ Drop this directory into `~/.claude/skills/ccc` (or a project's `.claude/skills/
    a passphrase, or an email to support.
 
 Then just ask Claude to run something on the cluster.
+
+## Examples
+
+Prompts that trigger it:
+
+```
+Train this on Rorqual, 1 H100 for 8 hours. Give me the job ID.
+Is job 12345678 still running? Show me the tail of its log.
+Pull run042 back into ./results/.
+It OOM'd at step 900 — bump the memory and resubmit.
+How many CPUs should I ask for per GPU on Narval?
+Does any cluster I can reach have RT cores for OptiX?
+```
