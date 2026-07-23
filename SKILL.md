@@ -528,22 +528,86 @@ that turn into a queue full of jobs that die in 30 seconds. In order of effectiv
    ```
 4. **Batch your uncertainty.** If unsure between four configs, submit a 4-task array of smoke jobs
    rather than four sequential guess-and-check rounds. Latency is the scarce resource, not slots.
-5. **Poor-man's REPL** (when you genuinely need to iterate on a live GPU): submit one job that polls
-   a directory in scratch, executes any script it finds there, and writes output back.
-   ```bash
-   # inside the job
-   mkdir -p $CMDQ/in $CMDQ/out
-   while [ ! -f $CMDQ/stop ]; do
-     for f in $CMDQ/in/*.sh; do
-       [ -e "$f" ] || continue
-       bash "$f" > $CMDQ/out/$(basename $f).out 2>&1; rm "$f"
-     done
-     sleep 5
-   done
-   ```
-   You then `rsync` a script in and `cat` the result out — both allowed. This burns allocation while
-   idling, so give it a short `--time` and a MIG instance, and only use it when steps 1–4 have failed
-   to isolate something. It is a workaround, not the default.
+### The absolute rule: if you are *working to make a failing job run*, open a REPL
+
+**As soon as the task turns into "get this thing working on the cluster" rather than "run this thing
+on the cluster", stop submitting one-shot jobs and open the poor-man's REPL below.** A single failure
+you can fix outright — a typo, a wrong path, a `--time` that was too short — just fix and resubmit.
+But the moment you are *iterating* — fix, submit, wait, read one line, fix again — you are in the
+wrong mode, and the rule is absolute: switch on the second submission, not the fifth.
+
+This is a hard rule because the failure mode is seductive: every individual fix looks like the last
+one, so "just one more probe" always seems cheaper than setting up a REPL. It is not. Ten minutes of
+queue latency to learn one fact, five times over, is a dependency chain — a missing wheel, then a
+second missing wheel, then an unset variable, then a wrong module version — that is *one* REPL
+session, and it costs less allocation than the queue waits you were burning anyway.
+
+Bringing up a new project's environment (§9) is this task by definition. So are: `ModuleNotFoundError`,
+`ImportError`, a missing shared library, a wrong module version, an unset environment variable, a
+CUDA/cuDNN mismatch. All of them are "ask the node a question" problems, and one-shot jobs are the
+worst possible instrument for asking questions.
+
+**But read what was actually asked first.** "Run X and tell me if it works" is a request for a
+*result*, including a negative one — submit it, and if it fails, report the failure. Do not silently
+escalate into a debugging campaign the user did not ask for; that spends their allocation on a
+question they may already know the answer to. The REPL rule governs how you debug *once fixing it is
+the task* — either because the user asked you to make it work, or because you asked and they said
+yes. When it is ambiguous, one line is enough: "it fails with X; want me to work on it?"
+
+**Submit the REPL with the first command already queued**, so a working environment produces the
+result immediately and a broken one leaves you attached to a live node either way. Note that the
+environment is built **once**, at job start — every subsequent command reuses it, which is most of
+the point: the five minutes of `pip install` stop being paid per attempt.
+
+```bash
+#!/bin/bash
+#SBATCH --account=rrg-jlalonde
+#SBATCH --gpus-per-node=h100_3g.40gb:1     # MIG: cheapest live GPU, and it starts soonest
+#SBATCH --time=0-02:00
+set -uo pipefail
+
+CMDQ=/home/yohanpg/links/scratch/myproj/cmdq
+mkdir -p $CMDQ/in $CMDQ/out && rm -f $CMDQ/stop
+
+module load StdEnv/2023 gcc python/3.11 cuda/12.6 cudnn      # built once…
+virtualenv --no-download $SLURM_TMPDIR/env
+source $SLURM_TMPDIR/env/bin/activate
+pip install --no-index -r requirements.txt                   # …and reused by every command below
+export PYTHONPATH=/path/to/repo:${PYTHONPATH:-}
+echo "READY $(date)" > $CMDQ/out/READY                        # poll this to know it is live
+
+while [ ! -f $CMDQ/stop ]; do
+  for f in $CMDQ/in/*.sh; do
+    [ -e "$f" ] || continue
+    b=$(basename "$f")
+    mv "$f" "$CMDQ/running_$b"                # claim it first, or the next loop runs it again
+    bash "$CMDQ/running_$b" > "$CMDQ/out/$b.out" 2>&1
+    echo "EXIT=$?" >> "$CMDQ/out/$b.out"      # otherwise you cannot tell failure from empty output
+    rm -f "$CMDQ/running_$b"
+    echo "DONE $b $(date)" >> $CMDQ/out/LOG
+  done
+  sleep 5
+done
+```
+
+Then iterate at ssh speed — both halves are whitelisted:
+
+```bash
+rsync -azh --no-g --no-p probe.sh cc:/home/yohanpg/links/scratch/myproj/cmdq/in/probe.sh
+ssh cc "cat /home/yohanpg/links/scratch/myproj/cmdq/out/probe.sh.out"
+```
+
+Discipline that keeps this honest:
+
+- **It burns allocation while idling** — a `3g.40gb` costs 0.5 GPU-h per wall hour whether or not it is
+  computing. Ask for `--time=0-02:00`, not eight hours, and **`scancel` it the moment the recipe
+  works**; do not leave one parked overnight.
+- **Batch your questions into one script.** You are paying for the node either way, so ask five
+  things per round trip, not one.
+- **Write the answer down as you go** (§9). The REPL is where you learn the module line and the pin
+  list; that knowledge has to outlive the job.
+- Use a CPU-only REPL under `def-` when nothing you are debugging needs the GPU — import errors and
+  missing wheels usually do not, and CPU core-equivalents are the cheaper pool.
 
 If the workflow keeps hitting the wrapper's limits, the fix is to **widen the wrapper**, not to
 accumulate hacks. Raise it with the user: `command=` can point at a custom script, and adding `seff`,
@@ -558,6 +622,15 @@ of it is in this skill — it is project-specific: which modules, which pinned w
 the Alliance wheelhouse is missing, which cluster it was proven on. **Write that down in `CCC.md` at
 the root of the project you are working on**, and update it whenever a run teaches you something new.
 Read it first if it already exists: it is the difference between one probe job and five.
+
+**`CCC.md` is strictly about *running this project on the cluster* — nothing else.** The test is:
+would this note still be true on a laptop or a different GPU box? If yes, it is a *project* fact
+(model behavior, output quirks, resolution/quality trade-offs, algorithm findings, experiment
+results), and it does **not** belong in `CCC.md` — put it wherever the project keeps its own notes
+(an `ai_reports/` file, the code, a design doc). `CCC.md` only holds what is true *because it is the
+Alliance cluster*: the module set, the wheelhouse gaps, the paths and quotas, the job scripts, the
+`$SLURM_TMPDIR` staging. Keeping model/research findings out of it is not pedantry — it is what makes
+the file worth reading the next time someone just needs to get the environment up.
 
 Keep it short and concrete — a recipe, not an essay:
 
